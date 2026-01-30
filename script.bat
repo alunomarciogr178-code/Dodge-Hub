@@ -1,523 +1,257 @@
--- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║                  DODGE HUB 4.7 (TEST) - BLOX FRUITS                      ║
--- ║              Script Automático com RemoteEvents Funcionais               ║
--- ╚═══════════════════════════════════════════════════════════════════════════╝
-
 local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local TS = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+local Data = player:WaitForChild("Data")
+local Level = Data:WaitForChild("Level")
+local Beli = Data:WaitForChild("Beli")
+local Fragments = Data:WaitForChild("Fragments")
+
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- ═══════════════════════════════════════════════════════════════════════════
--- CONFIGURAÇÕES E VARIÁVEIS
--- ═══════════════════════════════════════════════════════════════════════════
+local Remotes = RS:WaitForChild("Remotes")
+local CommF = Remotes:WaitForChild("CommF_")
 
-local scriptConfig = {
-    maxQuestLevel = 2800,
-    currentQuestLevel = 0,
-    inSea2 = false,
-    farmingDarkFragment = false,
-}
-
-local playerStats = {
-    level = 0,
-    money = 0,
-    purpleFragments = 0,
-    godHumanOwned = false,
-    cursedDualKatanaOwned = false,
-    skillGuitarOwned = false,
-    raceV2 = false,
-    raceV3 = false,
-}
-
-local raidBossStatus = {
-    massGod = false,
-    ripIndra = false,
-    tyrantSkies = false,
-}
-
--- ═══════════════════════════════════════════════════════════════════════════
--- REMOTES - ESTRUTURA REAL BLOX FRUITS
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function getRemotes()
-    local RS = game:GetService("ReplicatedStorage")
-    
-    -- Tentar encontrar a pasta de remotes
-    local remotes = RS:WaitForChild("Remotes") or RS:WaitForChild("Remote") or RS:FindFirstChild("Events")
-    
-    if not remotes then
-        warn("[DODGE HUB] Remotes não encontrados!")
-        return nil
-    end
-    
-    return remotes
+local function fireRemote(action, ...)
+    pcall(CommF.InvokeServer, CommF, action, ...)
 end
 
-local Remotes = getRemotes()
+player.CharacterAdded:Connect(function(ch)
+    character = ch
+    humanoid = ch:WaitForChild("Humanoid")
+    rootPart = ch:WaitForChild("HumanoidRootPart")
+end)
 
--- ═══════════════════════════════════════════════════════════════════════════
--- FUNÇÕES DE LOG
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function printLog(message)
-    print("[🐕 DODGE HUB 4.7] " .. message)
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 9e9
+Lighting.Brightness = 2
+settings().Rendering.QualityLevel = "Level01"
+RunService:Set3dRenderingEnabled(false)
+for _,v in pairs(Lighting:GetChildren()) do
+    if v:IsA("PostEffect") then v.Enabled = false end
 end
 
-local function printError(message)
-    warn("[❌ DODGE HUB ERROR] " .. message)
-end
+fireRemote("SetTeam", "Marines")
 
--- ═══════════════════════════════════════════════════════════════════════════
--- SISTEMA DE COMUNICAÇÃO COM SERVIDOR VIA REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
+local scriptConfig = { inSea2 = false }
 
-local function fireRemote(remoteName, ...)
-    if not Remotes then
-        printError("Remotes não inicializados!")
-        return false
-    end
-    
-    local remote = Remotes:FindFirstChild(remoteName)
-    
-    if not remote then
-        printError("Remote '" .. remoteName .. "' não encontrado!")
-        return false
-    end
-    
-    if remote:IsA("RemoteEvent") then
-        remote:FireServer(...)
+local function detectAdmin(p)
+    local n = p.Name:lower()
+    if n:find("admin") or n:find("mod") or n:find("dev") or n:find("owner") or p:GetAttribute("Admin") or p:FindFirstChild("AdminTag") then
         return true
-    elseif remote:IsA("RemoteFunction") then
-        return remote:InvokeServer(...)
-    end
-    
-    return false
-end
-
-local function invokeRemote(remoteName, ...)
-    if not Remotes then
-        printError("Remotes não inicializados!")
-        return nil
-    end
-    
-    local remote = Remotes:FindFirstChild(remoteName)
-    
-    if not remote or not remote:IsA("RemoteFunction") then
-        printError("RemoteFunction '" .. remoteName .. "' não encontrado!")
-        return nil
-    end
-    
-    return remote:InvokeServer(...)
-end
-
--- ═══════════════════════════════════════════════════════════════════════════
--- SISTEMA DE QUESTS COM REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function acceptQuest(npcName, questLevel)
-    -- RemoteEvents comuns para aceitar quests em Blox Fruits
-    local possibleRemotes = {
-        "StartQuest",
-        "RequestQuest",
-        "AcceptQuest",
-        "QuestRequest",
-    }
-    
-    for _, remoteName in pairs(possibleRemotes) do
-        if fireRemote(remoteName, npcName, questLevel) then
-            printLog("✅ Quest aceita do NPC: " .. npcName .. " (Nível: " .. questLevel .. ")")
-            scriptConfig.currentQuestLevel = questLevel
-            return true
-        end
-    end
-    
-    printError("Não consegui aceitar quest de " .. npcName)
-    return false
-end
-
-local function completeQuest(questID)
-    -- RemoteEvents para completar quests
-    local possibleRemotes = {
-        "FinishQuest",
-        "CompleteQuest",
-        "QuestComplete",
-        "RequestQuest",
-    }
-    
-    for _, remoteName in pairs(possibleRemotes) do
-        if fireRemote(remoteName, questID) then
-            printLog("🎯 Quest completada!")
-            playerStats.level += 10
-            playerStats.money += 1000
-            return true
-        end
-    end
-    
-    return false
-end
-
--- ═══════════════════════════════════════════════════════════════════════════
--- DESBLOQUEIO DE ESTILOS E FRUTAS COM REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function unlockFightingStyle(styleName)
-    printLog("🥋 Desbloqueando: " .. styleName)
-    
-    local possibleRemotes = {
-        "UnlockStyle",
-        "BuyStyle",
-        "UnlockAbility",
-        "LearningAbility",
-    }
-    
-    for _, remoteName in pairs(possibleRemotes) do
-        if fireRemote(remoteName, styleName) then
-            printLog("✅ " .. styleName .. " desbloqueado!")
-            return true
-        end
-    end
-    
-    return false
-end
-
-local function unlockGodHuman()
-    if playerStats.level >= 550 then
-        printLog("👹 Desbloqueando: GOD HUMAN")
-        if unlockFightingStyle("GodHuman") or unlockFightingStyle("God Human") then
-            playerStats.godHumanOwned = true
-            return true
-        end
     end
     return false
 end
 
-local function unlockCursedDualKatana()
-    if playerStats.level >= 700 then
-        printLog("🗡️ Desbloqueando: CURSED DUAL KATANA")
-        if unlockFightingStyle("CursedDualKatana") or unlockFightingStyle("Cursed Dual Katana") then
-            playerStats.cursedDualKatanaOwned = true
-            return true
-        end
-    end
-    return false
-end
-
-local function unlockSkillGuitar()
-    if playerStats.level >= 450 then
-        printLog("🎸 Desbloqueando: SKILL GUITAR")
-        if unlockFightingStyle("SkillGuitar") or unlockFightingStyle("Skill Guitar") then
-            playerStats.skillGuitarOwned = true
-            return true
-        end
-    end
-    return false
-end
-
--- ═══════════════════════════════════════════════════════════════════════════
--- COLETA DE FRUTAS COM REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function collectFruit(fruitName)
-    local possibleRemotes = {
-        "BuyFruit",
-        "CollectFruit",
-        "SpinFruit",
-        "GetFruit",
-    }
-    
-    for _, remoteName in pairs(possibleRemotes) do
-        if fireRemote(remoteName, fruitName) then
-            printLog("🍎 Fruta coletada: " .. fruitName)
-            return true
-        end
-    end
-    
-    return false
-end
-
--- ═══════════════════════════════════════════════════════════════════════════
--- EVOLUÇÃO DO MAR COM REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function teleportToSea2()
-    if playerStats.level >= 700 and not scriptConfig.inSea2 then
-        printLog("🌊 Evoluindo para SEA 2...")
-        
-        local possibleRemotes = {
-            "TravelSea",
-            "ChangeSea",
-            "EvolveSea",
-            "RequestTravel",
-        }
-        
-        for _, remoteName in pairs(possibleRemotes) do
-            if fireRemote(remoteName, 2) or fireRemote(remoteName, "Sea2") or fireRemote(remoteName, "SecondSea") then
-                scriptConfig.inSea2 = true
-                printLog("✅ Agora em SEA 2!")
-                return true
+local function hopServer()
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+    end)
+    if ok and data and data.data then
+        for _,s in ipairs(data.data) do
+            if s.playing and s.playing < 6 and s.id ~= game.JobId then
+                TS:TeleportToPlaceInstance(game.PlaceId, s.id)
+                break
             end
         end
     end
-    return false
 end
 
--- ═══════════════════════════════════════════════════════════════════════════
--- RAID BOSS COM REMOTES
--- ═══════════════════════════════════════════════════════════════════════════
+Players.PlayerAdded:Connect(function(p)
+    task.spawn(function()
+        task.wait(1.2)
+        if detectAdmin(p) then hopServer() end
+    end)
+end)
 
-local function defeatRaidBoss(bossName)
-    local possibleRemotes = {
-        "AttackRaidBoss",
-        "FightRaidBoss",
-        "RaidBossAttack",
-        "Combat",
-    }
-    
-    for _, remoteName in pairs(possibleRemotes) do
-        if fireRemote(remoteName, bossName) then
-            printLog("⚔️ Atacando raid boss: " .. bossName)
-            playerStats.money += 50000
-            return true
+task.spawn(function()
+    while task.wait(6) do
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= player and detectAdmin(p) then hopServer() break end
         end
     end
-    
-    return false
-end
+end)
 
--- ═══════════════════════════════════════════════════════════════════════════
--- ANTI-BAN E PROTEÇÕES
--- ═══════════════════════════════════════════════════════════════════════════
+task.spawn(function()
+    while task.wait(1800) do hopServer() end
+end)
 
-local function detectAdmin()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            -- Verificar se tem tag de admin
-            if p:FindFirstChild("AdminTag") or p:GetAttribute("Admin") or string.find(p.Name:lower(), "admin") then
-                return true
-            end
+task.spawn(function()
+    while task.wait(1.4) do
+        if humanoid.Health <= 0 then
+            pcall(function()
+                humanoid:Destroy()
+                Instance.new("Humanoid", character)
+            end)
         end
     end
-    return false
-end
+end)
 
-local function leaveGame()
-    printLog("⚠️ Admin detectado! Saindo do servidor...")
-    game:GetService("TeleportService"):Teleport(game.PlaceId)
-end
+local levelFarms = {
+    {min=1,   max=15,   quest={"CitizenQuest",1},     mobs={"Bandit"}},
+    {min=15,  max=30,   quest={"MilitarySoldierQuest",1}, mobs={"Marine Soldier"}},
+    {min=30,  max=60,   quest={"MonkeyQuest",1},      mobs={"Monkey"}},
+    {min=60,  max=90,   quest={"GorillaQuest",1},     mobs={"Gorilla"}},
+    {min=90,  max=120,  quest={"JungleQuest",1},      mobs={"Jungle Pirate"}},
+    {min=120, max=150,  quest={"PirateQuest",1},      mobs={"Pirate"}},
+    {min=150, max=200,  quest={"DesertQuest",1},      mobs={"Desert Bandit"}},
+    {min=200, max=250,  quest={"SnowBanditQuest",1},  mobs={"Snow Bandit"}},
+    {min=250, max=300,  quest={"SnowmanQuest",1},     mobs={"Snowman"}},
+    {min=300, max=375,  quest={"ChiefPettyQuest",1},  mobs={"Chief Petty Officer"}},
+    {min=375, max=450,  quest={"SkyBanditQuest",1},   mobs={"Sky Bandit"}},
+    {min=450, max=575,  quest={"PrisonerQuest",1},    mobs={"Prisoner"}},
+    {min=575, max=700,  quest={"DangerousPrisonerQuest",1}, mobs={"Dangerous Prisoner"}},
+    {min=700, max=850,  quest={"ColosseumQuest",1},   mobs={"Gladiator"}},
+    {min=850, max=1000, quest={"RaiderQuest",1},      mobs={"Raider"}},
+    {min=1000,max=1100, quest={"LivingZombieQuest",1}, mobs={"Living Zombie"}},
+    {min=1100,max=1250, quest={"DemonicWispQuest",1}, mobs={"Demonic Wisp"}},
+    {min=1250,max=1350, quest={"SeaSoldierQuest",1},  mobs={"Sea Soldier"}},
+    {min=1350,max=1500, quest={"FishmanWarriorQuest",1}, mobs={"Fishman Warrior"}},
+    {min=1500,max=1575, quest={"FishmanCaptainQuest",1}, mobs={"Fishman Captain"}},
+    {min=1575,max=1625, quest={"SharkmanQuest",1},    mobs={"Sharkman"}},
+    {min=1625,max=1675, quest={"MythicalPirateQuest",1}, mobs={"Mythical Pirate"}},
+    {min=1675,max=1750, quest={"PirateMillionaireQuest",1}, mobs={"Pirate Millionaire"}},
+    {min=1750,max=1825, quest={"DragonCrewWarriorQuest",1}, mobs={"Dragon Crew Warrior"}},
+    {min=1825,max=1900, quest={"CastleOnTheSeaQuest",1}, mobs={"Pirate Millionaire"}},
+    {min=1500,max=2000, quest={"PortTownQuest",1},    mobs={"Pirate Brute"}},
+    {min=2000,max=2075, quest={"HydraQuest",1},       mobs={"Sea Soldier"}},
+    {min=2075,max=2150, quest={"FloatingTurtleQuest",1}, mobs={"Pirate Brigade"}},
+    {min=2150,max=2250, quest={"HauntedCastleQuest",1}, mobs={"Reborn Skeleton"}},
+    {min=2250,max=2375, quest={"SeaOfTreatsQuest",1}, mobs={"Cake Minion"}},
+    {min=2375,max=2450, quest={"TikiOutpostQuest",1}, mobs={"Isle Outlaw"}},
+    {min=2450,max=2550, quest={"FloatingTurtleQuest",2}, mobs={"Pirate Millionaire"}},
+    {min=2550,max=2650, quest={"MansionQuest",4},     mobs={"Mansion Guard"}},
+    {min=2650,max=2750, quest={"CursedShipQuest",2},  mobs={"Cursed Pirate"}},
+    {min=2750,max=2800, quest={"UsoppPartyQuest",1},  mobs={"Usopp Party Member"}}
+}
 
-local function antiResetProtection()
-    if humanoid.Health <= 0 then
-        humanoid:Destroy()
-        local newHumanoid = Instance.new("Humanoid")
-        newHumanoid.Parent = character
-    end
-end
+task.spawn(function()
+    while task.wait(3.5) do
+        local lv = Level.Value
 
--- ═══════════════════════════════════════════════════════════════════════════
--- INTERFACE DO USUÁRIO (UI)
--- ═══════════════════════════════════════════════════════════════════════════
+        for _, farm in ipairs(levelFarms) do
+            if lv >= farm.min and lv <= farm.max then
+                fireRemote("StartQuest", farm.quest[1], farm.quest[2])
 
-local function createDodgeHubUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "DodgeHubUI"
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-    screenGui.ResetOnSpawn = false
-    
-    -- Frame Principal
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 380, 0, 520)
-    mainFrame.Position = UDim2.new(0.01, 0, 0.01, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    mainFrame.BorderColor3 = Color3.fromRGB(255, 165, 0)
-    mainFrame.BorderSizePixel = 3
-    mainFrame.Parent = screenGui
-    
-    -- Título
-    local titleFrame = Instance.new("Frame")
-    titleFrame.Size = UDim2.new(1, 0, 0, 70)
-    titleFrame.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
-    titleFrame.BorderSizePixel = 0
-    titleFrame.Parent = mainFrame
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 1, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "🐕 DODGE HUB 4.7 (TEST)"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 20
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Parent = titleFrame
-    
-    -- ScrollingFrame para Stats
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Size = UDim2.new(1, -10, 1, -90)
-    scrollFrame.Position = UDim2.new(0, 5, 0, 75)
-    scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    scrollFrame.BorderSizePixel = 0
-    scrollFrame.ScrollBarThickness = 8
-    scrollFrame.Parent = mainFrame
-    
-    -- Layout
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
-    layout.Parent = scrollFrame
-    
-    local function addStat(label, value, color)
-        local statFrame = Instance.new("Frame")
-        statFrame.Size = UDim2.new(1, -10, 0, 30)
-        statFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-        statFrame.BorderSizePixel = 1
-        statFrame.BorderColor3 = Color3.fromRGB(255, 165, 0)
-        statFrame.Parent = scrollFrame
-        
-        local labelText = Instance.new("TextLabel")
-        labelText.Size = UDim2.new(0.6, 0, 1, 0)
-        labelText.BackgroundTransparency = 1
-        labelText.Text = label
-        labelText.TextColor3 = Color3.fromRGB(200, 200, 200)
-        labelText.TextSize = 13
-        labelText.Font = Enum.Font.Gotham
-        labelText.TextXAlignment = Enum.TextXAlignment.Left
-        labelText.Parent = statFrame
-        
-        local valueText = Instance.new("TextLabel")
-        valueText.Name = "Value"
-        valueText.Size = UDim2.new(0.4, 0, 1, 0)
-        valueText.Position = UDim2.new(0.6, 0, 0, 0)
-        valueText.BackgroundTransparency = 1
-        valueText.Text = tostring(value)
-        valueText.TextColor3 = color or Color3.fromRGB(255, 165, 0)
-        valueText.TextSize = 13
-        valueText.Font = Enum.Font.GothamBold
-        valueText.TextXAlignment = Enum.TextXAlignment.Right
-        valueText.Parent = statFrame
-        
-        return valueText
-    end
-    
-    -- Adicionar Stats
-    addStat("📊 Nível", playerStats.level, Color3.fromRGB(100, 255, 100))
-    addStat("💵 Dinheiro", playerStats.money, Color3.fromRGB(255, 255, 100))
-    addStat("🔮 Fragmentos", playerStats.purpleFragments, Color3.fromRGB(200, 100, 255))
-    addStat("👹 GOD HUMAN", playerStats.godHumanOwned and "✅" or "❌", 
-        playerStats.godHumanOwned and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100))
-    addStat("🗡️ Cursed Dual Katana", playerStats.cursedDualKatanaOwned and "✅" or "❌",
-        playerStats.cursedDualKatanaOwned and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100))
-    addStat("🎸 Skill GUITAR", playerStats.skillGuitarOwned and "✅" or "❌",
-        playerStats.skillGuitarOwned and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100))
-    addStat("👤 Race V2", playerStats.raceV2 and "✅" or "❌",
-        playerStats.raceV2 and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100))
-    addStat("👤 Race V3", playerStats.raceV3 and "✅" or "❌",
-        playerStats.raceV3 and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100))
-    
-    -- Footer
-    local footerFrame = Instance.new("Frame")
-    footerFrame.Size = UDim2.new(1, 0, 0, 45)
-    footerFrame.Position = UDim2.new(0, 0, 1, -45)
-    footerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    footerFrame.BorderColor3 = Color3.fromRGB(255, 165, 0)
-    footerFrame.BorderSizePixel = 1
-    footerFrame.Parent = mainFrame
-    
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "Status"
-    statusLabel.Size = UDim2.new(1, 0, 1, 0)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Status: ✅ Ativo"
-    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    statusLabel.TextSize = 12
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.Parent = footerFrame
-    
-    return {
-        mainFrame = mainFrame,
-        scrollFrame = scrollFrame,
-        statusLabel = statusLabel
-    }
-end
-
--- ═══════════════════════════════════════════════════════════════════════════
--- LOOP PRINCIPAL
--- ═══════════════════════════════════════════════════════════════════════════
-
-local function mainLoop()
-    printLog("🚀 Iniciando Dodge Hub 4.7 (Test)...")
-    printLog("=".repeat(50))
-    
-    wait(1)
-    local ui = createDodgeHubUI()
-    printLog("✅ Interface criada com sucesso!")
-    
-    local tickCounter = 0
-    
-    while true do
-        pcall(function()
-            tickCounter += 1
-            
-            -- Verificar Admin a cada 5 segundos
-            if tickCounter % 5 == 0 then
-                if detectAdmin() then
-                    leaveGame()
-                    return
+                local pos
+                if lv <= 700 then
+                    pos = Vector3.new(950, 100, 950)
+                elseif lv <= 1500 then
+                    pos = Vector3.new(-5000, 300, -5000)
+                else
+                    pos = Vector3.new(-12000, 300, -8000)
                 end
+                rootPart.CFrame = CFrame.new(pos + Vector3.new(math.random(-150,150), 0, math.random(-150,150)))
+
+                pcall(function()
+                    for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                        local n = enemy.Name:lower()
+                        for _, m in ipairs(farm.mobs) do
+                            if n:find(m:lower()) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                                rootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0)
+                                break
+                            end
+                        end
+                    end
+                end)
+                break
             end
-            
-            -- Proteção Anti-Reset
-            antiResetProtection()
-            
-            -- Aceitar Quests
-            if scriptConfig.currentQuestLevel < scriptConfig.maxQuestLevel then
-                if tickCounter % 3 == 0 then
-                    acceptQuest("QuestMaster", scriptConfig.currentQuestLevel + 1)
-                end
-            end
-            
-            -- Desbloquear Estilos
-            if tickCounter % 10 == 0 then
-                unlockSkillGuitar()
-                unlockGodHuman()
-                unlockCursedDualKatana()
-            end
-            
-            -- Evoluir para Sea 2
-            if tickCounter % 15 == 0 then
-                teleportToSea2()
-            end
-            
-            -- Raid Bosses
-            if tickCounter % 20 == 0 then
-                if not raidBossStatus.massGod then
-                    defeatRaidBoss("MassGod")
-                    raidBossStatus.massGod = true
-                end
-                if not raidBossStatus.ripIndra then
-                    defeatRaidBoss("RipIndra")
-                    raidBossStatus.ripIndra = true
-                end
-                if not raidBossStatus.tyrantSkies then
-                    defeatRaidBoss("TyrantOfSkyes")
-                    raidBossStatus.tyrantSkies = true
-                end
-            end
-            
-            wait(1)
-        end)
+        end
     end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Tool") and obj:FindFirstChild("Handle") and (obj.Name:lower():find("fruit") or obj.Name:lower():find("devil")) then
+                pcall(function()
+                    obj.Parent = player.Backpack
+                    fireRemote("StoreFruit", obj.Name, obj.Handle)
+                end)
+            end
+        end
+        for _, t in ipairs(player.Backpack:GetChildren()) do
+            if t:IsA("Tool") and t.Name:lower():find("fruit") then
+                fireRemote("StoreFruit", t.Name, t.Handle)
+            end
+        end
+    end
+end)
+
+local sg = Instance.new("ScreenGui")
+sg.Name = "DodgeHubMini"
+sg.ResetOnSpawn = false
+sg.Parent = player:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 260, 0, 240)
+main.Position = UDim2.new(0.01, 0, 0.28, 0)
+main.BackgroundColor3 = Color3.fromRGB(18, 18, 32)
+main.BorderColor3 = Color3.fromRGB(255, 200, 60)
+main.BorderSizePixel = 2
+main.Parent = sg
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,35)
+title.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+title.Text = "Dodge Hub"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+title.Parent = main
+
+local doge = Instance.new("ImageLabel")
+doge.Size = UDim2.new(1,0,1,0)
+doge.BackgroundTransparency = 1
+doge.ImageTransparency = 0.70
+doge.Image = "rbxassetid://148947938"
+doge.Parent = main
+
+local stats = {
+    {"Beli", Beli},
+    {"Fragments", Fragments},
+    {"God Human", "❌"},
+    {"Cursed Dual Katana", "❌"},
+    {"Soul Guitar", "❌"},
+    {"Mirror Fractal", "❌"},
+    {"Valkyrie Helm", "❌"}
+}
+
+local lbls = {}
+for i, item in ipairs(stats) do
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.92, 0, 0, 24)
+    lbl.Position = UDim2.new(0.04, 0, 0.20 + (i-1)*0.085, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextColor3 = Color3.fromRGB(220,220,255)
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 14
+    lbl.Text = item[1] .. ": carregando..."
+    lbl.Parent = main
+    lbls[item[1]] = lbl
 end
 
--- ═══════════════════════════════════════════════════════════════════════════
--- INICIAR SCRIPT
--- ═══════════════════════════════════════════════════════════════════════════
+task.spawn(function()
+    while task.wait(2.5) do
+        lbls["Beli"].Text       = "Beli: " .. Beli.Value
+        lbls["Fragments"].Text  = "Fragments: " .. Fragments.Value
 
-printLog("Carregando...")
-wait(1)
+        local bp = player.Backpack
+        local char = character
 
-task.spawn(mainLoop)
+        lbls["God Human"].Text          = "God Human: " .. (bp:FindFirstChild("Godhuman") or char:FindFirstChild("Godhuman") and "✅" or "❌")
+        lbls["Cursed Dual Katana"].Text = "Cursed Dual Katana: " .. (bp:FindFirstChild("Cursed Dual Katana") or char:FindFirstChild("Cursed Dual Katana") and "✅" or "❌")
+        lbls["Soul Guitar"].Text        = "Soul Guitar: " .. (bp:FindFirstChild("Soul Guitar") or char:FindFirstChild("Soul Guitar") and "✅" or "❌")
+        lbls["Mirror Fractal"].Text     = "Mirror Fractal: " .. (Fragments.Value >= 5000 and "provável" or "❌")
+        lbls["Valkyrie Helm"].Text      = "Valkyrie Helm: " .. (bp:FindFirstChild("Valkyrie Helm") or char:FindFirstChild("Valkyrie Helm") and "✅" or "❌")
+    end
+end)
 
-printLog("✅ Script pronto! Procurando remotes...")
+loadstring(game:HttpGet("https://raw.githubusercontent.com/alunomarciogr178-code/Dodge-Hub/33bb22c15b0d30abef02caf73f737bede661febc/script.bat"))()
