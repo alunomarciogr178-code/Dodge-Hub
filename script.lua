@@ -1,23 +1,19 @@
-task.spawn(function()
-    repeat task.wait() until game:IsLoaded()
-    repeat task.wait() until plr and plr.Character
+repeat task.wait() until game:IsLoaded()
 
-    pcall(function()
-        Marines()
-    end)
-    
-    repeat task.wait() until plr:FindFirstChild("PlayerGui")
-    
-    pcall(function()
-        local MainGui = plr.PlayerGui:WaitForChild("Main", 10)
-        if MainGui then
-            local ChooseTeam = MainGui:WaitForChild("ChooseTeam", 5)
-            if ChooseTeam and ChooseTeam.Visible then
-                Marines()
-            end
-        end
-    end)
-end)
+local pg = game.Players.LocalPlayer.PlayerGui
+local chooseTeam = pg:WaitForChild("Main"):WaitForChild("ChooseTeam", 20)
+
+if chooseTeam and chooseTeam.Visible then
+    local piratesButton = chooseTeam.Container.Pirates.Frame.ViewportFrame.TextButton
+    if piratesButton then
+        firesignal(piratesButton.Activated)  -- Simula clique
+        -- Ou use fireclickdetector se tiver ClickDetector (raro)
+        print("Botão Pirates clicado automaticamente!")
+    else
+        -- Fallback pro remote se botão não encontrado
+        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+    end
+end
 task.spawn(function()
     local HttpService = game:GetService("HttpService")
     local Players = game:GetService("Players")
