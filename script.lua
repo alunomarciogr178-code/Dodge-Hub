@@ -689,7 +689,7 @@ QuestNeta = function()
 end
 
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local Window = Fluent:CreateWindow({Title = "🌑Eclipse Hub🌑",SubTitle = "| https://discord.gg/9AKZGMak",TabWidth = 180,Size = UDim2.fromOffset(660, 440),Acrylic = true,Theme = "Dark",MinimizeKey = Enum.KeyCode.End})
+local Window = Fluent:CreateWindow({Title = "🌑Eclipse Hub🌑",SubTitle = "| https://discord.gg/9AKZGMak",TabWidth = 180,Size = UDim2.fromOffset(660, 440),Acrylic = false,Theme = "Aqua",MinimizeKey = Enum.KeyCode.End})
 	
 -- Services
 local CoreGui = game:GetService("CoreGui")
@@ -763,17 +763,17 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 local Tabs = {
-  Settings = Window:AddTab({Title = "⚙️Config Farm", Icon = ""}),
-  Main = Window:AddTab({Title = "🚀Farms", Icon = ""}),
-  Quests = Window:AddTab({Title = "💎Farm Item", Icon = ""}),
-  Melle = Window:AddTab({Title = "🥊Fighting style", Icon = ""}),
+  Settings = Window:AddTab({Title = "⚙️Setting Farm", Icon = ""}),
+  Main = Window:AddTab({Title = "🚀Farm", Icon = ""}),
+  Melee = Window:AddTab({Title = "🥊Fighting Style", Icon = ""}),
+  Quests = Window:AddTab({Title = "💎Items Farm", Icon = ""}),
   SeaEvent = Window:AddTab({Title = "🌊Sea Events", Icon = ""}),
-  Mirage = Window:AddTab({Title = "🏝️Mirage + RaceV4", Icon = ""}),
+  Mirage = Window:AddTab({Title = "Mirage + RaceV4", Icon = ""}),
   Drago = Window:AddTab({Title = "🐉Drago Dojo", Icon = ""}),
   Prehistoric = Window:AddTab({Title = "🦕Prehistoric", Icon = ""}),
   Raids = Window:AddTab({Title = "🌀Raid", Icon = ""}),
   Combat = Window:AddTab({Title = "⚔️Combat PVP", Icon = ""}),
-  Travel = Window:AddTab({Title = "🗺️Teleport", Icon = ""}),
+  Travel = Window:AddTab({Title = "🗺️Travel", Icon = ""}),
   Fruit = Window:AddTab({Title = "🍎Fruits", Icon = ""}),
   Shop = Window:AddTab({Title = "🛒Shop", Icon = ""}),
   Misc = Window:AddTab({Title = "⚡Misc", Icon = ""})
