@@ -768,7 +768,7 @@ local Tabs = {
   Melee = Window:AddTab({Title = "🥊Fighting Style", Icon = ""}),
   Quests = Window:AddTab({Title = "💎Items Farm", Icon = ""}),
   SeaEvent = Window:AddTab({Title = "🌊Sea Events", Icon = ""}),
-  Mirage = Window:AddTab({Title = "Mirage + RaceV4", Icon = ""}),
+  Mirage = Window:AddTab({Title = "🌴Mirage + RaceV4", Icon = ""}),
   Drago = Window:AddTab({Title = "🐉Drago Dojo", Icon = ""}),
   Prehistoric = Window:AddTab({Title = "🦕Prehistoric", Icon = ""}),
   Raids = Window:AddTab({Title = "🌀Raid", Icon = ""}),
