@@ -951,24 +951,8 @@ spawn(function()
   end
 end)
 
-Tabs.Main:AddSection("Miscellanea / Quest / Valentines")
+Tabs.Main:AddSection("Miscellanea / Quest")
 
-local ClosetMons = Tabs.Main:AddToggle("ClosetMons", {Title = "Random Valentines Gacha", Description = "", Default = false})
-ClosetMons:OnChanged(function(Value)
-_G.AutoSpinValentineGacha = Value
-
-spawn(function()
-    while _G.AutoSpinValentineGacha do
-        wait(Sec)  -- usa o mesmo delay do teu Random Fruit normal (Sec = 0.1)
-        pcall(function()
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Buy")
-            replicated.Remotes.CommF_:InvokeServer("ValentineGacha", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGacha", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("SpinGacha", "Valentines")
-        end)
-    end
-end)
 local ClosetMons = Tabs.Main:AddToggle("ClosetMons", {Title = "Auto Farm Nearest", Description = "", Default = false})
 ClosetMons:OnChanged(function(Value)
   _G.AutoFarmNear = Value
