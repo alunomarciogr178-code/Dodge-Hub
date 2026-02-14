@@ -767,7 +767,6 @@ local Tabs = {
   Main = Window:AddTab({Title = "🚀Farm", Icon = ""}),
   Melee = Window:AddTab({Title = "🥊Fighting Style", Icon = ""}),
   Quests = Window:AddTab({Title = "💎Items Farm", Icon = ""}),
-  Event = Window:AddTab({Title = "💖Valentine's Day", Icon = ""}),
   SeaEvent = Window:AddTab({Title = "🌊Sea Events", Icon = ""}),
   Mirage = Window:AddTab({Title = "🌴Mirage + RaceV4", Icon = ""}),
   Drago = Window:AddTab({Title = "🐉Drago Dojo", Icon = ""}),
@@ -952,8 +951,24 @@ spawn(function()
   end
 end)
 
-Tabs.Main:AddSection("Miscellanea / Quest")
+Tabs.Main:AddSection("Miscellanea / Quest / Valentine")
 
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Random Valentine's Shop", Description = "I recommend leaving auto-farm level and auto-store enabled for easy farming.", Default = false})
+Q:OnChanged(function(Value)
+_G.AutoSpinValentineGacha = Value
+
+spawn(function()
+    while _G.AutoSpinValentineGacha do
+        wait(Sec)
+        pcall(function()
+            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Spin")
+            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Buy")
+            replicated.Remotes.CommF_:InvokeServer("ValentineGacha", "Spin")
+            replicated.Remotes.CommF_:InvokeServer("ValentinesGacha", "Spin")
+            replicated.Remotes.CommF_:InvokeServer("SpinGacha", "Valentines")
+        end)
+    end
+end)
 local ClosetMons = Tabs.Main:AddToggle("ClosetMons", {Title = "Auto Farm Nearest", Description = "", Default = false})
 ClosetMons:OnChanged(function(Value)
   _G.AutoFarmNear = Value
@@ -3696,22 +3711,6 @@ spawn(function()
       end)
     end
   end
-end)
-local Q = Tabs.Event:AddToggle("Q", {Title = "Auto Random Valentine's Shop", Description = "I recommend leaving auto-farm level and auto-store enabled for easy farming.", Default = false})
-Q:OnChanged(function(Value)
-_G.AutoSpinValentineGacha = Value
-
-spawn(function()
-    while _G.AutoSpinValentineGacha do
-        wait(Sec)
-        pcall(function()
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGachaDealer", "Buy")
-            replicated.Remotes.CommF_:InvokeServer("ValentineGacha", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("ValentinesGacha", "Spin")
-            replicated.Remotes.CommF_:InvokeServer("SpinGacha", "Valentines")
-        end)
-    end
 end)
 Tabs.Mirage:AddSection("Mystic Island / Full Moon")
 FullMOOn = Tabs.Mirage:AddParagraph({Title = " FullMoon Status ",Content = ""})
